@@ -14,8 +14,6 @@ dist-ssr
 src-tauri/target
 src-tauri/gen
 outputs
-video/**/renders
-video/**/.hyperframes
 work
 *.local
 

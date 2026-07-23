@@ -57,8 +57,6 @@ Codex Beacon 只服务一个场景：在 Windows 桌面顶部持续呈现真实�
 codex-beacon.exe --install-codex-hooks
 ```
 
-详细的数据结构和手动测试方法见 [Codex 集成说明](docs/codex-integration.md)，模块职责见 [架构说明](docs/architecture.md)。
-
 ## 环境要求
 
 - Windows 10 或 Windows 11
@@ -132,13 +130,6 @@ src-tauri/target/release/bundle/nsis/Codex Beacon_0.4.0_x64-setup.exe
 │   ├── src/lib.rs                  # Tauri 组合入口
 │   ├── src/main.rs
 │   └── tauri.conf.json
-├── docs/
-│   ├── architecture.md
-│   ├── codex-integration.md
-│   ├── github-publishing.md
-│   └── product-copy.md
-├── video/
-│   └── codex-beacon-intro/        # HyperFrames 产品视频源文件
 └── package.json
 ```
 
@@ -157,9 +148,3 @@ src-tauri/target/release/bundle/nsis/Codex Beacon_0.4.0_x64-setup.exe
 ## 作者
 
 [0731koukou](https://github.com/0731koukou)
-
-## 项目资料
-
-- [产品文案](docs/product-copy.md)
-- [架构说明](docs/architecture.md)
-- [GitHub 发布步骤](docs/github-publishing.md)
