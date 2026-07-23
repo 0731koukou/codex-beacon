@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="zh-CN" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        margin: 0;
+        overflow: hidden;
+        background: #080d0c;
+      }
+
+      body {
+        color: #e8f4f0;
+        font-family: "Noto Sans JP", sans-serif;
+      }
+
+      .mono,
+      .eyebrow,
+      .status,
+      .meta,
+      .step-count {
+        font-family: "IBM Plex Mono", monospace;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .icon-art {
+        background-image: url("assets/codex-beacon-icon.png");
+        background-position: center;
+        background-size: cover;
+      }
+
+      #root,
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+      }
+
+      .scene {
+        background-color: #080d0c;
+      }
+
+      #scene-1 {
+        z-index: 1;
+      }
+
+      #scene-2,
+      #scene-3,
+      #scene-4 {
+        z-index: 2;
+        opacity: 0;
+      }
+
+      .scene::before {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 82% 32%, rgba(53, 214, 176, 0.1), rgba(53, 214, 176, 0) 34%),
+          radial-gradient(circle at 18% 82%, rgba(53, 214, 176, 0.055), rgba(53, 214, 176, 0) 30%);
+        content: "";
+      }
+
+      .grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(232, 244, 240, 0.028) 1px, rgba(232, 244, 240, 0) 1px),
+          linear-gradient(90deg, rgba(232, 244, 240, 0.028) 1px, rgba(232, 244, 240, 0) 1px);
+        background-size: 72px 72px;
+        mask-image: radial-gradient(circle at center, #080d0c 10%, rgba(8, 13, 12, 0) 76%);
+      }
+
+      .scene-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        width: 100%;
+        height: 100%;
+        padding: 92px 118px;
+        gap: 74px;
+      }
+
+      .eyebrow {
+        color: #35d6b0;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        max-width: 1120px;
+        font-size: 118px;
+        font-weight: 900;
+        letter-spacing: -0.055em;
+        line-height: 1.02;
+      }
+
+      h2 {
+        font-size: 78px;
+        font-weight: 900;
+        letter-spacing: -0.045em;
+        line-height: 1.08;
+      }
+
+      .lead {
+        max-width: 870px;
+        color: #a9bbb5;
+        font-size: 30px;
+        font-weight: 350;
+        line-height: 1.65;
+      }
+
+      .hairline {
+        width: 100%;
+        height: 1px;
+        background: rgba(232, 244, 240, 0.16);
+        transform-origin: left center;
+      }
+
+      .intro-copy {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        justify-content: center;
+        max-width: 1120px;
+        gap: 28px;
+      }
+
+      .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .brand-icon-small {
+        width: 62px;
+        height: 62px;
+        border-radius: 16px;
+      }
+
+      .brand-wordmark {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .intro-meta {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        color: #77908a;
+        font-size: 18px;
+      }
+
+      .intro-meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .intro-meta i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #35d6b0;
+        box-shadow: 0 0 18px rgba(53, 214, 176, 0.8);
+      }
+
+      .signal-stage {
+        position: relative;
+        display: flex;
+        width: 450px;
+        min-width: 450px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .signal-stage::after {
+        position: absolute;
+        width: 390px;
+        height: 390px;
+        border-radius: 50%;
+        background: rgba(53, 214, 176, 0.08);
+        filter: blur(48px);
+        content: "";
+      }
+
+      .brand-icon-hero {
+        position: relative;
+        z-index: 2;
+        width: 310px;
+        height: 310px;
+        border-radius: 72px;
+        box-shadow:
+          0 34px 90px rgba(0, 0, 0, 0.42),
+          0 0 70px rgba(53, 214, 176, 0.13);
+      }
+
+      .orbit {
+        position: absolute;
+        z-index: 1;
+        width: 390px;
+        height: 390px;
+        border: 1px solid rgba(53, 214, 176, 0.2);
+        border-radius: 50%;
+      }
+
+      .orbit::after {
+        position: absolute;
+        top: 36px;
+        right: 40px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #35d6b0;
+        box-shadow: 0 0 24px rgba(53, 214, 176, 0.8);
+        content: "";
+      }
+
+      .feature-layout {
+        align-items: center;
+      }
+
+      .product-frame {
+        width: 1040px;
+        min-width: 1040px;
+        overflow: hidden;
+        border: 1px solid rgba(232, 244, 240, 0.13);
+        border-radius: 38px;
+        background: #101816;
+        box-shadow: 0 38px 110px rgba(0, 0, 0, 0.46);
+      }
+
+      .app-bar {
+        display: flex;
+        height: 98px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 34px;
+        border-bottom: 1px solid rgba(232, 244, 240, 0.1);
+      }
+
+      .app-brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .app-brand .app-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 13px;
+      }
+
+      .app-brand strong {
+        display: block;
+        font-size: 21px;
+        line-height: 1.05;
+      }
+
+      .app-brand small {
+        color: #71857f;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        padding: 9px 14px;
+        gap: 9px;
+        border: 1px solid rgba(53, 214, 176, 0.28);
+        border-radius: 999px;
+        color: #72e6c8;
+        background: rgba(53, 214, 176, 0.08);
+        font-size: 15px;
+      }
+
+      .status::before {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #35d6b0;
+        box-shadow: 0 0 16px rgba(53, 214, 176, 0.8);
+        content: "";
+      }
+
+      .status.attention {
+        border-color: rgba(242, 180, 91, 0.38);
+        color: #f5c779;
+        background: rgba(242, 180, 91, 0.09);
+      }
+
+      .status.attention::before {
+        background: #f2b45b;
+        box-shadow: 0 0 16px rgba(242, 180, 91, 0.85);
+      }
+
+      .app-body {
+        display: grid;
+        min-height: 526px;
+        padding: 42px;
+        grid-template-columns: 1.38fr 0.62fr;
+        gap: 30px;
+      }
+
+      .task-title {
+        max-width: 630px;
+        margin-top: 25px;
+        font-size: 39px;
+        font-weight: 900;
+        letter-spacing: -0.035em;
+        line-height: 1.25;
+      }
+
+      .meta {
+        display: flex;
+        margin-top: 22px;
+        gap: 18px;
+        color: #769088;
+        font-size: 14px;
+      }
+
+      .activity-card {
+        margin-top: 40px;
+        padding: 25px 28px 28px;
+        border: 1px solid rgba(53, 214, 176, 0.22);
+        border-radius: 24px;
+        background: rgba(8, 13, 12, 0.5);
+      }
+
+      .activity-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .step-count {
+        color: #8ba099;
+        font-size: 14px;
+      }
+
+      .progress-track {
+        height: 5px;
+        margin-top: 22px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(232, 244, 240, 0.09);
+      }
+
+      .progress-value {
+        width: 60%;
+        height: 100%;
+        border-radius: inherit;
+        background: #35d6b0;
+        box-shadow: 0 0 18px rgba(53, 214, 176, 0.45);
+        transform-origin: left center;
+      }
+
+      .current-action {
+        margin-top: 20px;
+        color: #b7c9c3;
+        font-size: 17px;
+      }
+
+      .recent-column {
+        padding-left: 30px;
+        border-left: 1px solid rgba(232, 244, 240, 0.1);
+      }
+
+      .recent-column h3 {
+        margin: 2px 0 24px;
+        color: #7f938d;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+
+      .recent-item {
+        display: flex;
+        padding: 17px 0;
+        gap: 13px;
+        border-bottom: 1px solid rgba(232, 244, 240, 0.07);
+      }
+
+      .recent-dot {
+        width: 8px;
+        height: 8px;
+        margin-top: 8px;
+        border-radius: 50%;
+        background: #35d6b0;
+      }
+
+      .recent-item strong {
+        display: block;
+        font-size: 16px;
+        line-height: 1.4;
+      }
+
+      .recent-item small {
+        color: #758a83;
+        font-size: 12px;
+      }
+
+      .feature-copy {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        justify-content: center;
+        gap: 25px;
+      }
+
+      .feature-list {
+        display: flex;
+        flex-direction: column;
+        margin-top: 14px;
+        gap: 18px;
+      }
+
+      .feature-list span {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: #a7bab4;
+        font-size: 22px;
+      }
+
+      .feature-list i {
+        width: 22px;
+        height: 1px;
+        background: #35d6b0;
+      }
+
+      .attention-frame .activity-card {
+        border-color: rgba(242, 180, 91, 0.3);
+      }
+
+      .attention-frame .progress-value {
+        width: 74%;
+        background: #f2b45b;
+        box-shadow: 0 0 18px rgba(242, 180, 91, 0.36);
+      }
+
+      .approval-box {
+        display: flex;
+        margin-top: 30px;
+        padding: 22px 24px;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid rgba(242, 180, 91, 0.23);
+        border-radius: 20px;
+        background: rgba(242, 180, 91, 0.06);
+      }
+
+      .approval-box strong {
+        font-size: 18px;
+      }
+
+      .approval-box small {
+        display: block;
+        margin-top: 6px;
+        color: #887966;
+        font-size: 13px;
+      }
+
+      .button {
+        display: inline-flex;
+        min-width: 142px;
+        height: 48px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(242, 180, 91, 0.46);
+        border-radius: 14px;
+        color: #f7d399;
+        background: rgba(242, 180, 91, 0.1);
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .attention-copy .eyebrow {
+        color: #f2b45b;
+      }
+
+      .attention-copy .feature-list i {
+        background: #f2b45b;
+      }
+
+      .outro-layout {
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .outro-copy {
+        display: flex;
+        max-width: 1040px;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      .outro-copy h2 {
+        max-width: 1100px;
+        font-size: 108px;
+      }
+
+      .outro-card {
+        display: flex;
+        width: 480px;
+        min-width: 480px;
+        padding: 34px;
+        flex-direction: column;
+        gap: 22px;
+        border: 1px solid rgba(53, 214, 176, 0.24);
+        border-radius: 30px;
+        background: #101816;
+        box-shadow: 0 34px 90px rgba(0, 0, 0, 0.42);
+      }
+
+      .outro-card-head {
+        display: flex;
+        align-items: center;
+        gap: 17px;
+      }
+
+      .outro-card .app-icon {
+        width: 62px;
+        height: 62px;
+        border-radius: 17px;
+      }
+
+      .outro-card strong {
+        font-size: 25px;
+      }
+
+      .outro-card p {
+        color: #95aaa3;
+        font-size: 18px;
+        line-height: 1.55;
+      }
+
+      .return-button {
+        display: flex;
+        height: 62px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 17px;
+        color: #07120f;
+        background: #35d6b0;
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .footer-line {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        color: #70857e;
+        font-size: 17px;
+      }
+
+      .footer-line i {
+        width: 52px;
+        height: 1px;
+        background: #35d6b0;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="20"
+      data-width="1920"
+      data-height="1080"
+    >
+      <section id="scene-1" class="scene" data-layout-allow-overflow data-layout-allow-overlap>
+        <div class="grid" data-layout-ignore></div>
+        <div class="scene-content">
+          <div class="intro-copy">
+            <div id="s1-brand" class="brand-row">
+              <div class="brand-icon-small icon-art" aria-hidden="true"></div>
+              <div class="brand-wordmark">Codex Beacon</div>
+            </div>
+            <div id="s1-label" class="eyebrow">Windows task signal</div>
+            <h1 id="s1-title">Codex 任务，不必守着窗口</h1>
+            <p id="s1-lead" class="lead">运行、计划、完成与待处理状态，安静地留在桌面视线里。</p>
+            <div id="s1-rule" class="hairline"></div>
+            <div id="s1-meta" class="intro-meta mono">
+              <span><i></i>Windows 10 / 11</span>
+              <span>Codex only</span>
+              <span>MIT License</span>
+            </div>
+          </div>
+          <div id="s1-signal" class="signal-stage">
+            <div class="orbit"></div>
+            <div class="brand-icon-hero icon-art" aria-hidden="true"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-2" class="scene" data-layout-allow-overflow data-layout-allow-overlap>
+        <div class="grid" data-layout-ignore></div>
+        <div class="scene-content feature-layout">
+          <div id="s2-frame" class="product-frame">
+            <div class="app-bar">
+              <div class="app-brand">
+                <div class="app-icon icon-art" aria-hidden="true"></div>
+                <div><strong>Codex Beacon</strong><small>CODEX TASK SIGNAL</small></div>
+              </div>
+              <div class="status">进行中 · 02:18</div>
+            </div>
+            <div class="app-body">
+              <div>
+                <div class="eyebrow">Running task</div>
+                <div class="task-title">生成 Codex Beacon 产品介绍视频</div>
+                <div class="meta"><span>codex-beacon</span><span>gpt-5.6-sol</span><span>会话 8f2c</span></div>
+                <div class="activity-card">
+                  <div class="activity-head">
+                    <span>Codex 正在处理任务</span>
+                    <span class="step-count">计划步骤 3 / 5</span>
+                  </div>
+                  <div class="progress-track"><div id="s2-progress" class="progress-value"></div></div>
+                  <div class="current-action">正在渲染产品介绍视频</div>
+                </div>
+              </div>
+              <div class="recent-column">
+                <h3>最近任务</h3>
+                <div class="recent-item"><i class="recent-dot"></i><div><strong>生成产品介绍视频</strong><small>刚刚 · 进行中</small></div></div>
+                <div class="recent-item"><i class="recent-dot"></i><div><strong>重新设计应用图标</strong><small>4 分钟前 · 已完成</small></div></div>
+                <div class="recent-item"><i class="recent-dot"></i><div><strong>关联 Codex 任务</strong><small>12 分钟前 · 已完成</small></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="feature-copy">
+            <div id="s2-label" class="eyebrow">Live progress</div>
+            <h2 id="s2-title">进度，不必猜</h2>
+            <p id="s2-lead" class="lead">读取真实 Codex 任务状态，显示最近动作和计划步骤。</p>
+            <div id="s2-list" class="feature-list">
+              <span><i></i>当前任务与耗时</span>
+              <span><i></i>计划完成步骤</span>
+              <span><i></i>最后回复与历史任务</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-3" class="scene" data-layout-allow-overflow data-layout-allow-overlap>
+        <div class="grid" data-layout-ignore></div>
+        <div class="scene-content feature-layout">
+          <div id="s3-frame" class="product-frame attention-frame">
+            <div class="app-bar">
+              <div class="app-brand">
+                <div class="app-icon icon-art" aria-hidden="true"></div>
+                <div><strong>Codex Beacon</strong><small>ATTENTION REQUIRED</small></div>
+              </div>
+              <div class="status attention">等待批准</div>
+            </div>
+            <div class="app-body">
+              <div>
+                <div class="eyebrow" style="color: #f2b45b">Approval needed</div>
+                <div class="task-title">需要执行受保护的系统操作</div>
+                <div class="meta"><span>codex-beacon</span><span>本地操作</span><span>会话 8f2c</span></div>
+                <div class="activity-card">
+                  <div class="activity-head">
+                    <span>Codex 等待你的决定</span>
+                    <span class="step-count">计划步骤 4 / 5</span>
+                  </div>
+                  <div class="progress-track"><div class="progress-value"></div></div>
+                  <div class="approval-box">
+                    <div><strong>任务已暂停，等待批准</strong><small>批准操作仍在 Codex 中完成</small></div>
+                    <div class="button">前往批准</div>
+                  </div>
+                </div>
+              </div>
+              <div class="recent-column">
+                <h3>当前状态</h3>
+                <div class="recent-item"><i class="recent-dot" style="background: #f2b45b"></i><div><strong>等待批准</strong><small>需要你的操作</small></div></div>
+                <div class="recent-item"><i class="recent-dot"></i><div><strong>计划已保留</strong><small>返回后继续执行</small></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="feature-copy attention-copy">
+            <div id="s3-label" class="eyebrow">Attention signal</div>
+            <h2 id="s3-title">该你决定时，立刻提醒</h2>
+            <p id="s3-lead" class="lead">待批准、待回复一眼可见，并精确跳回对应 Codex 对话。</p>
+            <div id="s3-list" class="feature-list">
+              <span><i></i>琥珀色注意状态</span>
+              <span><i></i>不接管 Codex 审批</span>
+              <span><i></i>回到原任务继续处理</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-4" class="scene" data-layout-allow-overflow data-layout-allow-overlap>
+        <div class="grid" data-layout-ignore></div>
+        <div class="scene-content outro-layout">
+          <div class="outro-copy">
+            <div id="s4-label" class="eyebrow">Codex Beacon</div>
+            <h2 id="s4-title">Codex 任务，一直在视线内</h2>
+            <p id="s4-lead" class="lead">Windows 专用的 Codex 任务状态信标。</p>
+            <div id="s4-footer" class="footer-line mono"><i></i>Windows 10 / 11 · MIT · 0731koukou</div>
+          </div>
+          <div id="s4-card" class="outro-card">
+            <div class="outro-card-head">
+              <div class="app-icon icon-art" aria-hidden="true"></div>
+              <div><strong>任务正在运行</strong><div class="status" style="margin-top: 8px">进行中 · 04:32</div></div>
+            </div>
+            <p>需要查看进度或处理批准时，直接返回原 Codex 对话。</p>
+            <div class="return-button">回到对话</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      tl.from("#s1-brand", { x: -52, opacity: 0, duration: 0.55, ease: "expo.out" }, 0.2);
+      tl.from("#s1-label", { letterSpacing: "0.32em", opacity: 0, duration: 0.7, ease: "sine.out" }, 0.38);
+      tl.from("#s1-title", { y: 72, opacity: 0, duration: 0.86, ease: "power4.out" }, 0.55);
+      tl.from("#s1-lead", { x: 44, opacity: 0, duration: 0.58, ease: "power2.out" }, 0.9);
+      tl.from("#s1-rule", { scaleX: 0, duration: 0.72, ease: "circ.out" }, 1.05);
+      tl.from("#s1-meta", { y: 24, opacity: 0, duration: 0.46, ease: "back.out(1.4)" }, 1.22);
+      tl.from("#s1-signal", { scale: 0.72, rotation: -7, opacity: 0, duration: 1.05, ease: "expo.out" }, 0.46);
+      tl.to("#s1-signal .orbit", { rotation: 40, duration: 3.2, ease: "none" }, 0.8);
+
+      tl.to("#scene-1", { filter: "blur(11px)", scale: 1.025, opacity: 0, duration: 0.5, ease: "power2.inOut" }, 4.15);
+      tl.fromTo("#scene-2", { filter: "blur(11px)", scale: 0.98, opacity: 0 }, { filter: "blur(0px)", scale: 1, opacity: 1, duration: 0.5, ease: "power2.inOut" }, 4.25);
+      tl.from("#s2-frame", { x: -86, opacity: 0, duration: 0.78, ease: "expo.out" }, 4.62);
+      tl.from("#s2-label", { y: -26, opacity: 0, duration: 0.4, ease: "back.out(1.5)" }, 4.82);
+      tl.from("#s2-title", { x: 62, opacity: 0, duration: 0.58, ease: "power4.out" }, 4.96);
+      tl.from("#s2-lead", { y: 36, opacity: 0, duration: 0.48, ease: "sine.out" }, 5.18);
+      tl.from("#s2-list span", { x: 34, opacity: 0, duration: 0.42, stagger: 0.11, ease: "circ.out" }, 5.36);
+      tl.from("#s2-progress", { scaleX: 0, duration: 1.15, ease: "power3.out" }, 5.24);
+      tl.to("#s2-frame", { y: -9, duration: 1.6, repeat: 1, yoyo: true, ease: "sine.inOut" }, 6.15);
+
+      tl.to("#scene-2", { x: -1920, duration: 0.48, ease: "power3.inOut" }, 8.9);
+      tl.fromTo("#scene-3", { x: 1920, opacity: 1 }, { x: 0, duration: 0.48, ease: "power3.inOut" }, 8.9);
+      tl.set("#scene-2", { x: 0, opacity: 0 }, 9.39);
+      tl.from("#s3-frame", { scale: 0.94, opacity: 0, duration: 0.7, ease: "expo.out" }, 9.3);
+      tl.from("#s3-label", { x: 48, opacity: 0, duration: 0.42, ease: "power3.out" }, 9.46);
+      tl.from("#s3-title", { y: 62, opacity: 0, duration: 0.68, ease: "circ.out" }, 9.58);
+      tl.from("#s3-lead", { opacity: 0, duration: 0.82, ease: "sine.out" }, 9.86);
+      tl.from("#s3-list span", { x: -28, opacity: 0, duration: 0.36, stagger: 0.09, ease: "back.out(1.35)" }, 10.06);
+      tl.to("#s3-frame .status.attention", { boxShadow: "0 0 24px rgba(242, 180, 91, 0.24)", duration: 0.7, repeat: 3, yoyo: true, ease: "sine.inOut" }, 10.3);
+
+      tl.to("#scene-3", { x: -1920, duration: 0.5, ease: "power3.inOut" }, 13.65);
+      tl.fromTo("#scene-4", { x: 1920, opacity: 1 }, { x: 0, duration: 0.5, ease: "power3.inOut" }, 13.65);
+      tl.set("#scene-3", { x: 0, opacity: 0 }, 14.16);
+      tl.from("#s4-label", { letterSpacing: "0.34em", opacity: 0, duration: 0.65, ease: "sine.out" }, 14.05);
+      tl.from("#s4-title", { x: -70, opacity: 0, duration: 0.78, ease: "expo.out" }, 14.2);
+      tl.from("#s4-lead", { y: 38, opacity: 0, duration: 0.52, ease: "power2.out" }, 14.48);
+      tl.from("#s4-footer", { scaleX: 0.88, opacity: 0, duration: 0.56, ease: "back.out(1.25)" }, 14.7);
+      tl.from("#s4-card", { x: 92, rotation: 2.5, opacity: 0, duration: 0.88, ease: "power4.out" }, 14.25);
+      tl.to("#s4-card", { y: -10, duration: 1.7, repeat: 1, yoyo: true, ease: "sine.inOut" }, 16.1);
+      tl.to(["#s4-label", "#s4-title", "#s4-lead", "#s4-footer", "#s4-card"], { opacity: 0, y: -18, duration: 0.55, stagger: 0.04, ease: "power2.in" }, 19.35);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

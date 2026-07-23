@@ -1,0 +1,6 @@
+@import "./styles/base.css";
+@import "./styles/shell.css";
+@import "./styles/workspace.css";
+@import "./styles/empty-state.css";
+@import "./styles/settings.css";
+@import "./styles/footer.css";
