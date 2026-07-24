@@ -1,6 +1,6 @@
 [package]
 name = "codex-beacon"
-version = "0.5.0"
+version = "0.6.0"
 description = "A Windows task-status beacon for Codex."
 authors = ["0731koukou"]
 license = "MIT"

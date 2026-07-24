@@ -6,7 +6,7 @@
   <p>Windows 上的 Codex 任务灵动岛。离开 Codex 窗口，也能看见任务是否在运行、用了多久、在哪个项目以及最终回复。</p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-0.5.0-55E49B">
+    <img alt="Version" src="https://img.shields.io/badge/version-0.6.0-55E49B">
     <img alt="License" src="https://img.shields.io/badge/license-MIT-55E49B">
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows-0078D4">
     <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-24C8DB">
@@ -18,7 +18,7 @@
 
 ## 下载与安装
 
-前往 [GitHub Releases](../../releases/latest) 下载 `Codex-Beacon_0.5.0_x64-setup.exe`，运行安装程序即可。
+前往 [GitHub Releases](../../releases/latest) 下载 `Codex-Beacon_0.6.0_x64-setup.exe`，运行安装程序即可。
 
 首次启动后需要在 Codex 的“设置 → Hooks”或 CLI `/hooks` 中审核并信任 Codex Beacon Hook。所有任务状态都保存在本机。
 
@@ -100,7 +100,7 @@ pnpm tauri build
 
 ```text
 src-tauri/target/release/codex-beacon.exe
-src-tauri/target/release/bundle/nsis/Codex Beacon_0.5.0_x64-setup.exe
+src-tauri/target/release/bundle/nsis/Codex Beacon_0.6.0_x64-setup.exe
 ```
 
 ## 本地数据
