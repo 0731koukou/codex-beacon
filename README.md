@@ -18,7 +18,7 @@
 
 ## 下载与安装
 
-前往 [GitHub Releases](../../releases/latest) 下载 `Codex Beacon_0.5.0_x64-setup.exe`，运行安装程序即可。
+前往 [GitHub Releases](../../releases/latest) 下载 `Codex-Beacon_0.5.0_x64-setup.exe`，运行安装程序即可。
 
 首次启动后需要在 Codex 的“设置 → Hooks”或 CLI `/hooks` 中审核并信任 Codex Beacon Hook。所有任务状态都保存在本机。
 
