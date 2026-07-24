@@ -1,8 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { PhysicalPosition } from "@tauri-apps/api/dpi";
+import {
+  availableMonitors,
+  getCurrentWindow,
+} from "@tauri-apps/api/window";
 import {
   ChevronDown,
+  GripHorizontal,
   Minus,
   Settings2,
   X,
@@ -50,8 +62,56 @@ import {
   sessionNotificationState,
   type SessionNotificationState,
 } from "./desktop/notifications";
+import {
+  DEFAULT_BACKGROUND_OPACITY,
+  isWindowPositionVisible,
+  normalizeBackgroundOpacity,
+  readBackgroundOpacity,
+  readWindowPosition,
+  saveBackgroundOpacity,
+  saveWindowPosition,
+  toScreenRect,
+} from "./desktop/preferences";
 import { checkForUpdate } from "./update";
 import "./App.css";
+
+function initialBackgroundOpacity() {
+  try {
+    return readBackgroundOpacity(window.localStorage);
+  } catch {
+    return DEFAULT_BACKGROUND_OPACITY;
+  }
+}
+
+async function restoreWindowPosition() {
+  if (!("__TAURI_INTERNALS__" in window)) {
+    return;
+  }
+
+  let position;
+  try {
+    position = readWindowPosition(window.localStorage);
+  } catch {
+    return;
+  }
+  if (!position) {
+    return;
+  }
+
+  const appWindow = getCurrentWindow();
+  const [size, monitors] = await Promise.all([
+    appWindow.outerSize(),
+    availableMonitors(),
+  ]);
+  const workAreas = monitors.map((monitor) =>
+    toScreenRect(monitor.workArea),
+  );
+  if (isWindowPositionVisible(position, size, workAreas)) {
+    await appWindow.setPosition(
+      new PhysicalPosition(position.x, position.y),
+    );
+  }
+}
 
 function App() {
   const [mode, setMode] = useState<IslandMode>("collapsed");
@@ -67,6 +127,9 @@ function App() {
   const [currentVersion, setCurrentVersion] = useState("");
   const [latestVersion, setLatestVersion] = useState("");
   const [updateChecked, setUpdateChecked] = useState(false);
+  const [backgroundOpacity, setBackgroundOpacity] = useState(
+    initialBackgroundOpacity,
+  );
   const notificationStates = useRef(
     new Map<string, SessionNotificationState>(),
   );
@@ -128,6 +191,7 @@ function App() {
       getLaunchAtStartup()
         .then(setLaunchAtStartupState)
         .catch(() => undefined),
+      restoreWindowPosition().catch(() => undefined),
     ]).finally(() => {
       void showReadyIsland().catch(() => undefined);
     });
@@ -146,6 +210,36 @@ function App() {
       window.clearInterval(clockTimer);
     };
   }, [refreshIntegration, refreshStatus]);
+
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) {
+      return;
+    }
+
+    let active = true;
+    let unlisten: (() => void) | undefined;
+    void getCurrentWindow()
+      .onMoved(({ payload }) => {
+        try {
+          saveWindowPosition(window.localStorage, payload);
+        } catch {
+          // The window remains draggable when storage is unavailable.
+        }
+      })
+      .then((next) => {
+        if (active) {
+          unlisten = next;
+        } else {
+          next();
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+      unlisten?.();
+    };
+  }, []);
 
   useEffect(() => {
     void getVersion()
@@ -326,6 +420,30 @@ function App() {
     }
   };
 
+  const startWindowDrag = (event: React.MouseEvent<HTMLElement>) => {
+    if (
+      event.button !== 0 ||
+      !("__TAURI_INTERNALS__" in window) ||
+      (event.target as HTMLElement).closest("button") !==
+        event.currentTarget.closest("button")
+    ) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    void getCurrentWindow().startDragging().catch(() => undefined);
+  };
+
+  const changeBackgroundOpacity = (value: number) => {
+    const next = normalizeBackgroundOpacity(value);
+    setBackgroundOpacity(next);
+    try {
+      saveBackgroundOpacity(window.localStorage, next);
+    } catch {
+      // The current setting still applies for this run.
+    }
+  };
+
   const collapsedSubtitle = currentSession
     ? projectName(currentSession.cwd)
     : integration.verified
@@ -383,8 +501,24 @@ function App() {
       data-integration={integrationPhase}
       data-attention={currentAttention}
       aria-live="polite"
+      style={
+        {
+          "--surface-opacity": backgroundOpacity / 100,
+        } as CSSProperties
+      }
     >
       <section className="collapsed-shell" aria-hidden={mode !== "collapsed"}>
+        <button
+          className="collapsed-drag-handle"
+          type="button"
+          title="拖动悬浮窗"
+          aria-label="拖动悬浮窗"
+          tabIndex={mode === "collapsed" ? 0 : -1}
+          onMouseDown={startWindowDrag}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <GripHorizontal aria-hidden="true" size={16} />
+        </button>
         <button
           className="collapsed-main"
           type="button"
@@ -446,7 +580,11 @@ function App() {
       </section>
 
       <section className="expanded-shell" aria-hidden={mode !== "expanded"}>
-        <header className="island-header" onClick={collapseFromBlank}>
+        <header
+          className="island-header"
+          title="拖动悬浮窗"
+          onMouseDown={startWindowDrag}
+        >
           <div className="brand-lockup">
             <CodexMark phase={currentPhase} compact />
             <div>
@@ -512,10 +650,12 @@ function App() {
               currentVersion={currentVersion}
               latestVersion={latestVersion}
               updateChecked={updateChecked}
+              backgroundOpacity={backgroundOpacity}
               onInstall={() => void installHooks()}
               onToggleStartup={() => void toggleLaunchAtStartup()}
               onClear={() => void clearStatus()}
               onOpenUpdate={() => void openUpdate()}
+              onBackgroundOpacityChange={changeBackgroundOpacity}
             />
           ) : currentSession ? (
             <SessionWorkspace

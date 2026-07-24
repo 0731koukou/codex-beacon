@@ -1,4 +1,10 @@
-import { Download, Power, RotateCw, Trash2 } from "lucide-react";
+import {
+  Blend,
+  Download,
+  Power,
+  RotateCw,
+  Trash2,
+} from "lucide-react";
 import { compactText } from "../codex/presentation";
 import type { CodexIntegrationStatus } from "../codex/types";
 
@@ -10,10 +16,12 @@ export function SettingsPanel({
   currentVersion,
   latestVersion,
   updateChecked,
+  backgroundOpacity,
   onInstall,
   onToggleStartup,
   onClear,
   onOpenUpdate,
+  onBackgroundOpacityChange,
 }: {
   integration: CodexIntegrationStatus;
   launchAtStartup: boolean;
@@ -22,10 +30,12 @@ export function SettingsPanel({
   currentVersion: string;
   latestVersion: string;
   updateChecked: boolean;
+  backgroundOpacity: number;
   onInstall: () => void;
   onToggleStartup: () => void;
   onClear: () => void;
   onOpenUpdate: () => void;
+  onBackgroundOpacityChange: (value: number) => void;
 }) {
   return (
     <div className="settings-panel">
@@ -72,6 +82,34 @@ export function SettingsPanel({
           >
             <span />
           </button>
+        </div>
+
+        <div className="settings-row settings-opacity-row">
+          <span className="settings-row-icon">
+            <Blend aria-hidden="true" size={16} />
+          </span>
+          <div className="settings-row-copy">
+            <strong>背景透明度</strong>
+            <span>只调整主背景，文字和控件保持清晰</span>
+          </div>
+          <div className="opacity-control">
+            <input
+              id="background-opacity"
+              type="range"
+              min="30"
+              max="100"
+              step="1"
+              value={backgroundOpacity}
+              aria-label="调节背景透明度"
+              aria-valuetext={`${backgroundOpacity}%`}
+              onChange={(event) =>
+                onBackgroundOpacityChange(Number(event.target.value))
+              }
+            />
+            <output htmlFor="background-opacity">
+              {backgroundOpacity}%
+            </output>
+          </div>
         </div>
 
         {latestVersion && (

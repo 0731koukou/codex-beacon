@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "test": "node --test \"tests/悬浮窗偏好.test.ts\"",
     "preview": "vite preview",
     "tauri": "tauri"
   },

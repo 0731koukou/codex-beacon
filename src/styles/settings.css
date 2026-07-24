@@ -1,9 +1,14 @@
 ﻿.settings-panel {
   height: 100%;
+  text-shadow: var(--legibility-shadow);
+}
+
+.island-body:has(.settings-panel) {
+  padding-block: 12px 8px;
 }
 
 .settings-heading {
-  height: 44px;
+  height: 36px;
 }
 
 .settings-heading > div {
@@ -13,7 +18,7 @@
 }
 
 .settings-heading > div > span {
-  color: var(--subtle);
+  color: var(--muted);
   font-size: 8.5px;
   font-weight: 700;
   letter-spacing: 0.13em;
@@ -33,7 +38,7 @@
 
 .settings-rows {
   display: flex;
-  margin-top: 10px;
+  margin-top: 6px;
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -44,8 +49,8 @@
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr) auto;
   align-items: center;
-  min-height: 55px;
-  padding: 8px 12px;
+  min-height: 44px;
+  padding: 6px 10px;
 }
 
 .settings-row + .settings-row {
@@ -152,14 +157,35 @@
 }
 
 .settings-rows:has(.update-row) .settings-row {
-  min-height: 46px;
-  padding-block: 6px;
+  min-height: 40px;
+  padding-block: 4px;
+}
+
+.opacity-control {
+  display: grid;
+  grid-template-columns: 82px 32px;
+  align-items: center;
+  gap: 6px;
+}
+
+.opacity-control input {
+  width: 82px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.opacity-control output {
+  color: var(--text);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .settings-footnote {
-  height: 30px;
+  height: 22px;
   padding: 0 4px;
-  color: var(--subtle);
+  color: var(--muted);
   font-size: 9px;
 }
 
@@ -171,6 +197,6 @@
 
 .settings-footnote span:last-child {
   max-width: 250px;
-  color: #505854;
+  color: #899699;
 }
 
