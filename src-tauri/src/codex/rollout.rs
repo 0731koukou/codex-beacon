@@ -7,7 +7,7 @@ use serde_json::{Map, Value};
 use std::{
     collections::HashMap,
     fs,
-    io::{Read, Seek, SeekFrom},
+    io::{BufRead, BufReader, Read, Seek, SeekFrom},
     path::{Path, PathBuf},
     sync::{Mutex, OnceLock},
     time::{SystemTime, UNIX_EPOCH},
@@ -16,11 +16,16 @@ use std::{
 static ROLLOUT_PATHS: OnceLock<Mutex<HashMap<String, PathBuf>>> = OnceLock::new();
 static ROLLOUT_ACTIVITY: OnceLock<Mutex<HashMap<String, CachedRolloutActivity>>> = OnceLock::new();
 
-pub(super) fn enrich_codex_sessions(sessions: &mut [CodexSession], home_dir: &Path) {
+pub(super) fn enrich_codex_sessions(sessions: &mut Vec<CodexSession>, home_dir: &Path) {
     let sessions_dir = home_dir.join(".codex").join("sessions");
     if !sessions_dir.is_dir() {
         return;
     }
+
+    sessions.retain(|session| {
+        rollout_path_for_session(&sessions_dir, &session.session_id)
+            .is_some_and(|path| rollout_belongs_to_user(&path))
+    });
 
     for session in sessions
         .iter_mut()
@@ -52,6 +57,24 @@ pub(super) fn enrich_codex_sessions(sessions: &mut [CodexSession], home_dir: &Pa
         session.current_step = activity.current_step;
         session.updated_at = session.updated_at.max(activity.updated_at);
     }
+}
+
+fn rollout_belongs_to_user(path: &Path) -> bool {
+    let Ok(file) = fs::File::open(path) else {
+        return false;
+    };
+    let mut first_line = String::new();
+    if BufReader::new(file).read_line(&mut first_line).is_err() {
+        return false;
+    }
+    let Ok(record) = serde_json::from_str::<Value>(&first_line) else {
+        return false;
+    };
+    record
+        .get("payload")
+        .and_then(|payload| payload.get("thread_source"))
+        .and_then(Value::as_str)
+        .is_none_or(|source| source == "user")
 }
 
 fn rollout_path_for_session(sessions_dir: &Path, session_id: &str) -> Option<PathBuf> {

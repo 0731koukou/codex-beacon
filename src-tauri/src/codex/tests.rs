@@ -1,3 +1,4 @@
+use super::rollout::enrich_codex_sessions;
 use super::{
     backup_existing_file_once, codex_config_with_hooks_enabled, codex_hook_is_verified,
     codex_hooks_are_installed, current_unix_millis, install_codex_hooks_for_paths,
@@ -346,7 +347,7 @@ fn rollout_activity_marks_interrupted_turn_failed() {
 }
 
 #[test]
-fn only_latest_turn_in_a_thread_stays_running() {
+fn one_thread_is_shown_as_one_latest_conversation() {
     let now = current_unix_millis();
     let mut sessions = serde_json::from_value::<Vec<CodexSession>>(json!([
         {
@@ -368,22 +369,101 @@ fn only_latest_turn_in_a_thread_stays_running() {
 
     normalize_codex_sessions(&mut sessions);
 
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(sessions[0].turn_id, "current-turn");
+    assert_eq!(sessions[0].phase, "running");
+}
+
+#[test]
+fn inactive_tasks_become_stale_without_overriding_attention() {
+    let now = current_unix_millis();
+    let inactive_at = now - (11 * 60 * 1000);
+    let mut sessions = serde_json::from_value::<Vec<CodexSession>>(json!([
+        {
+            "sessionId": "inactive-thread",
+            "turnId": "inactive-turn",
+            "phase": "running",
+            "startedAt": inactive_at,
+            "updatedAt": inactive_at
+        },
+        {
+            "sessionId": "waiting-thread",
+            "turnId": "waiting-turn",
+            "phase": "running",
+            "attention": "approval",
+            "startedAt": inactive_at,
+            "updatedAt": inactive_at
+        }
+    ]))
+    .expect("deserialize sessions");
+
+    normalize_codex_sessions(&mut sessions);
+
     assert_eq!(
         sessions
             .iter()
-            .find(|session| session.turn_id == "stopped-turn")
-            .expect("stopped turn")
+            .find(|session| session.session_id == "inactive-thread")
+            .expect("inactive thread")
             .phase,
-        "failed"
+        "stale"
     );
     assert_eq!(
         sessions
             .iter()
-            .find(|session| session.turn_id == "current-turn")
-            .expect("current turn")
+            .find(|session| session.session_id == "waiting-thread")
+            .expect("waiting thread")
             .phase,
         "running"
     );
+}
+
+#[test]
+fn only_user_conversations_with_rollouts_are_visible() {
+    let directory = std::env::temp_dir().join(format!(
+        "codex-beacon-visible-sessions-test-{}-{}",
+        std::process::id(),
+        current_unix_millis()
+    ));
+    let sessions_dir = directory.join(".codex").join("sessions");
+    fs::create_dir_all(&sessions_dir).expect("create sessions directory");
+
+    let user_id = "019f8ca3-5c75-7c71-8c3d-59eacd1f284a";
+    let subagent_id = "019f91b2-0dc8-7292-927e-dec0ac329a72";
+    fs::write(
+        sessions_dir.join(format!("rollout-user-{user_id}.jsonl")),
+        json!({
+            "type": "session_meta",
+            "payload": {"thread_source": "user"}
+        })
+        .to_string(),
+    )
+    .expect("write user rollout");
+    fs::write(
+        sessions_dir.join(format!("rollout-subagent-{subagent_id}.jsonl")),
+        json!({
+            "type": "session_meta",
+            "payload": {"thread_source": "subagent"}
+        })
+        .to_string(),
+    )
+    .expect("write subagent rollout");
+
+    let mut sessions = serde_json::from_value::<Vec<CodexSession>>(json!([
+        {"sessionId": user_id, "turnId": "user-turn", "phase": "completed"},
+        {"sessionId": subagent_id, "turnId": "subagent-turn", "phase": "completed"},
+        {
+            "sessionId": "019f91b6-b9f2-72b3-bf42-e27957293d3d",
+            "turnId": "missing-rollout",
+            "phase": "completed"
+        }
+    ]))
+    .expect("deserialize sessions");
+
+    enrich_codex_sessions(&mut sessions, &directory);
+
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(sessions[0].session_id, user_id);
+    fs::remove_dir_all(directory).expect("remove test directory");
 }
 
 #[test]

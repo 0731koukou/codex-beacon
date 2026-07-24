@@ -1,4 +1,4 @@
-import { Power, RotateCw, Trash2 } from "lucide-react";
+import { Download, Power, RotateCw, Trash2 } from "lucide-react";
 import { compactText } from "../codex/presentation";
 import type { CodexIntegrationStatus } from "../codex/types";
 
@@ -7,17 +7,25 @@ export function SettingsPanel({
   launchAtStartup,
   busyAction,
   notice,
+  currentVersion,
+  latestVersion,
+  updateChecked,
   onInstall,
   onToggleStartup,
   onClear,
+  onOpenUpdate,
 }: {
   integration: CodexIntegrationStatus;
   launchAtStartup: boolean;
   busyAction: string;
   notice: string;
+  currentVersion: string;
+  latestVersion: string;
+  updateChecked: boolean;
   onInstall: () => void;
   onToggleStartup: () => void;
   onClear: () => void;
+  onOpenUpdate: () => void;
 }) {
   return (
     <div className="settings-panel">
@@ -66,6 +74,25 @@ export function SettingsPanel({
           </button>
         </div>
 
+        {latestVersion && (
+          <div className="settings-row update-row">
+            <span className="settings-row-icon update">
+              <Download aria-hidden="true" size={16} />
+            </span>
+            <div className="settings-row-copy">
+              <strong>发现 Codex Beacon v{latestVersion}</strong>
+              <span>已发布新版本，点击前往 GitHub 下载</span>
+            </div>
+            <button
+              className="secondary-action update"
+              type="button"
+              onClick={onOpenUpdate}
+            >
+              查看
+            </button>
+          </div>
+        )}
+
         <div className="settings-row">
           <span className="settings-row-icon">
             <RotateCw aria-hidden="true" size={16} />
@@ -110,7 +137,14 @@ export function SettingsPanel({
       </div>
 
       <div className="settings-footnote">
-        <span>{notice || "任务数据仅保存在这台 Windows 设备上"}</span>
+        <span>
+          {notice ||
+            (currentVersion
+              ? `Codex Beacon v${currentVersion} · ${
+                  updateChecked ? "已检查更新" : "正在检查更新"
+                }`
+              : "任务数据仅保存在这台 Windows 设备上")}
+        </span>
         {integration.hooksPath && (
           <span title={integration.hooksPath}>
             {compactText(integration.hooksPath, 58)}

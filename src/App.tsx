@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   ChevronDown,
-  Clock3,
   Minus,
   Settings2,
   X,
@@ -38,10 +39,18 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import {
   getLaunchAtStartup,
   minimizeIsland,
+  openLatestRelease,
   setIslandInteraction,
   setLaunchAtStartup,
   showReadyIsland,
 } from "./desktop/api";
+import {
+  listenForNotificationActions,
+  notifySession,
+  sessionNotificationState,
+  type SessionNotificationState,
+} from "./desktop/notifications";
+import { checkForUpdate } from "./update";
 import "./App.css";
 
 function App() {
@@ -55,6 +64,13 @@ function App() {
   const [busyAction, setBusyAction] = useState("");
   const [notice, setNotice] = useState("");
   const [now, setNow] = useState(Date.now());
+  const [currentVersion, setCurrentVersion] = useState("");
+  const [latestVersion, setLatestVersion] = useState("");
+  const [updateChecked, setUpdateChecked] = useState(false);
+  const notificationStates = useRef(
+    new Map<string, SessionNotificationState>(),
+  );
+  const notificationsReady = useRef(false);
 
   const sessions = useMemo(
     () => status.sessions.map(normalizeSession),
@@ -132,6 +148,17 @@ function App() {
   }, [refreshIntegration, refreshStatus]);
 
   useEffect(() => {
+    void getVersion()
+      .then((version) => {
+        setCurrentVersion(version);
+        return checkForUpdate(version);
+      })
+      .then(setLatestVersion)
+      .catch(() => undefined)
+      .finally(() => setUpdateChecked(true));
+  }, []);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") {
         return;
@@ -146,6 +173,80 @@ function App() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [changeMode, mode, settingsOpen]);
+
+  useEffect(() => {
+    if (
+      mode !== "expanded" ||
+      !("__TAURI_INTERNALS__" in window)
+    ) {
+      return;
+    }
+
+    let active = true;
+    let unlisten: (() => void) | undefined;
+    void getCurrentWindow()
+      .onFocusChanged(({ payload: focused }) => {
+        if (!focused) {
+          void changeMode("collapsed");
+        }
+      })
+      .then((next) => {
+        if (active) {
+          unlisten = next;
+        } else {
+          next();
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+      unlisten?.();
+    };
+  }, [changeMode, mode]);
+
+  useEffect(() => {
+    let active = true;
+    let listener:
+      | Awaited<ReturnType<typeof listenForNotificationActions>>
+      | undefined;
+
+    void listenForNotificationActions()
+      .then((next) => {
+        if (active) {
+          listener = next;
+        } else {
+          void next.unregister();
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+      void listener?.unregister();
+    };
+  }, []);
+
+  useEffect(() => {
+    const nextStates = new Map<string, SessionNotificationState>();
+    for (const session of sessions) {
+      nextStates.set(session.sessionId, sessionNotificationState(session));
+    }
+
+    if (notificationsReady.current) {
+      for (const session of sessions) {
+        const next = nextStates.get(session.sessionId) ?? "";
+        const previous = notificationStates.current.get(session.sessionId);
+        if (next && next !== previous) {
+          void notifySession(session, next).catch(() => undefined);
+        }
+      }
+    } else {
+      notificationsReady.current = true;
+    }
+
+    notificationStates.current = nextStates;
+  }, [sessions]);
 
   const installHooks = async () => {
     setBusyAction("install");
@@ -202,6 +303,14 @@ function App() {
     }
   };
 
+  const openUpdate = async () => {
+    try {
+      await openLatestRelease();
+    } catch (error) {
+      setNotice(`无法打开下载页面：${String(error)}`);
+    }
+  };
+
   const openThread = async (session: CodexSession) => {
     try {
       await openCodexThread(session.sessionId);
@@ -211,19 +320,27 @@ function App() {
     }
   };
 
+  const collapseFromBlank = (event: React.MouseEvent<HTMLElement>) => {
+    if (event.target === event.currentTarget) {
+      void changeMode("collapsed");
+    }
+  };
+
   const collapsedSubtitle = currentSession
-    ? `${projectName(currentSession.cwd)} · ${
-        currentAttention === "approval"
-          ? "待批准"
-          : currentAttention === "input"
-            ? "待回复"
-            : PHASE_LABELS[currentPhase]
-      }`
+    ? projectName(currentSession.cwd)
     : integration.verified
       ? "Codex Hook 已验证"
       : integration.configured
         ? "Hook 已安装，等待 Codex 审核"
         : "尚未连接 Codex";
+  const compactStateLabel =
+    currentAttention === "approval"
+      ? "等待批准"
+      : currentAttention === "input"
+        ? "等待回复"
+        : currentPhase === "completed"
+          ? "任务完成"
+          : PHASE_LABELS[currentPhase];
   const integrationPhase = integration.verified
     ? "verified"
     : integration.configured
@@ -277,27 +394,42 @@ function App() {
         >
           <CodexMark phase={currentPhase} />
           <span className="collapsed-copy">
-            <span className="collapsed-title">
-              {currentSession ? taskTitle(currentSession) : emptyTitle}
+            <span className="collapsed-title-row">
+              {currentSession && <span className="collapsed-task-dot" />}
+              <span className="collapsed-title">
+                {currentSession ? taskTitle(currentSession) : emptyTitle}
+              </span>
             </span>
-            <span className="collapsed-subtitle">{collapsedSubtitle}</span>
+            <span
+              className={`collapsed-subtitle-row ${currentSession ? "has-status" : ""}`}
+            >
+              <span className="collapsed-subtitle">{collapsedSubtitle}</span>
+              {currentSession && (
+                <span className="collapsed-time">
+                  {sessionDuration(currentSession, now)}
+                </span>
+              )}
+            </span>
           </span>
-          {currentSession ? (
-            <span className="collapsed-time">
-              <Clock3 aria-hidden="true" size={13} />
-              {sessionDuration(currentSession, now)}
+          <span className="collapsed-status-group">
+            {currentSession ? (
+              <span
+                className={`collapsed-status phase-${currentPhase} attention-${currentAttention || "none"}`}
+              >
+                {compactStateLabel}
+              </span>
+            ) : (
+              <span className={`collapsed-ready state-${integrationPhase}`}>
+                {integration.verified
+                  ? "READY"
+                  : integration.configured
+                    ? "REVIEW"
+                    : "SETUP"}
+              </span>
+            )}
+            <span className="expand-affordance">
+              <ChevronDown aria-hidden="true" size={17} />
             </span>
-          ) : (
-            <span className={`collapsed-ready state-${integrationPhase}`}>
-              {integration.verified
-                ? "READY"
-                : integration.configured
-                  ? "REVIEW"
-                  : "SETUP"}
-            </span>
-          )}
-          <span className="expand-affordance">
-            <ChevronDown aria-hidden="true" size={15} />
           </span>
         </button>
 
@@ -309,12 +441,12 @@ function App() {
           tabIndex={mode === "collapsed" ? 0 : -1}
           onClick={() => void minimizeIsland().catch(() => undefined)}
         >
-          <Minus aria-hidden="true" size={15} />
+          <Minus aria-hidden="true" size={16} />
         </button>
       </section>
 
       <section className="expanded-shell" aria-hidden={mode !== "expanded"}>
-        <header className="island-header">
+        <header className="island-header" onClick={collapseFromBlank}>
           <div className="brand-lockup">
             <CodexMark phase={currentPhase} compact />
             <div>
@@ -370,16 +502,20 @@ function App() {
           </div>
         </header>
 
-        <div className="island-body">
+        <div className="island-body" onClick={collapseFromBlank}>
           {settingsOpen ? (
             <SettingsPanel
               integration={integration}
               launchAtStartup={launchAtStartup}
               busyAction={busyAction}
               notice={notice}
+              currentVersion={currentVersion}
+              latestVersion={latestVersion}
+              updateChecked={updateChecked}
               onInstall={() => void installHooks()}
               onToggleStartup={() => void toggleLaunchAtStartup()}
               onClear={() => void clearStatus()}
+              onOpenUpdate={() => void openUpdate()}
             />
           ) : currentSession ? (
             <SessionWorkspace
@@ -399,7 +535,7 @@ function App() {
           )}
         </div>
 
-        <footer className="island-footer">
+        <footer className="island-footer" onClick={collapseFromBlank}>
           <span className="footer-signal">
             <span className={`signal-line phase-${currentPhase}`} />
             {footerHint}

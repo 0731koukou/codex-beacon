@@ -3,7 +3,7 @@
 }
 
 .settings-heading {
-  height: 42px;
+  height: 44px;
 }
 
 .settings-heading > div {
@@ -14,26 +14,26 @@
 
 .settings-heading > div > span {
   color: var(--subtle);
-  font-size: 8px;
+  font-size: 8.5px;
   font-weight: 700;
   letter-spacing: 0.13em;
 }
 
 .settings-heading h1 {
-  font-size: 15px;
-  font-weight: 630;
+  font-size: 16.5px;
+  font-weight: 660;
 }
 
 .connection-chip {
-  height: 25px;
-  padding: 0 9px;
+  height: 27px;
+  padding: 0 10px;
   border-radius: 13px;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .settings-rows {
   display: flex;
-  margin-top: 8px;
+  margin-top: 10px;
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -44,8 +44,8 @@
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr) auto;
   align-items: center;
-  min-height: 51px;
-  padding: 7px 11px;
+  min-height: 55px;
+  padding: 8px 12px;
 }
 
 .settings-row + .settings-row {
@@ -54,8 +54,8 @@
 
 .settings-row-icon {
   display: grid;
-  width: 27px;
-  height: 27px;
+  width: 29px;
+  height: 29px;
   place-items: center;
   border-radius: 50%;
   color: var(--accent);
@@ -67,6 +67,11 @@
   background: rgba(241, 122, 122, 0.07);
 }
 
+.settings-row-icon.update {
+  color: var(--warning);
+  background: rgba(243, 189, 101, 0.07);
+}
+
 .settings-row-copy {
   display: flex;
   padding-left: 5px;
@@ -76,13 +81,13 @@
 
 .settings-row-copy strong {
   color: #dce2df;
-  font-size: 10.5px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 620;
 }
 
 .settings-row-copy span {
-  color: var(--subtle);
-  font-size: 8.5px;
+  color: var(--muted);
+  font-size: 9.5px;
 }
 
 .switch {
@@ -130,7 +135,7 @@
   border-radius: 13px;
   color: #bec6c2;
   background: rgba(255, 255, 255, 0.045);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .secondary-action:hover {
@@ -142,11 +147,20 @@
   color: var(--danger);
 }
 
+.secondary-action.update {
+  color: var(--warning);
+}
+
+.settings-rows:has(.update-row) .settings-row {
+  min-height: 46px;
+  padding-block: 6px;
+}
+
 .settings-footnote {
-  height: 28px;
+  height: 30px;
   padding: 0 4px;
   color: var(--subtle);
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .settings-footnote span {

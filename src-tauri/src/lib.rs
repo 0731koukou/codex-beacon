@@ -6,6 +6,7 @@ pub use codex::install_codex_hooks_for_current_user;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             let _ = desktop::show_island(app);
         }))
@@ -16,6 +17,7 @@ pub fn run() {
             desktop::minimize_island,
             desktop::get_launch_at_startup,
             desktop::set_launch_at_startup,
+            desktop::open_latest_release,
             codex::status::get_codex_status,
             codex::status::open_codex_thread,
             codex::status::clear_codex_status,

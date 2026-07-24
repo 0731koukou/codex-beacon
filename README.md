@@ -6,7 +6,7 @@
   <p>Windows 上的 Codex 任务灵动岛。离开 Codex 窗口，也能看见任务是否在运行、用了多久、在哪个项目以及最终回复。</p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-0.4.0-55E49B">
+    <img alt="Version" src="https://img.shields.io/badge/version-0.5.0-55E49B">
     <img alt="License" src="https://img.shields.io/badge/license-MIT-55E49B">
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows-0078D4">
     <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-24C8DB">
@@ -18,7 +18,7 @@
 
 ## 下载与安装
 
-前往 [GitHub Releases](../../releases/latest) 下载 `Codex Beacon_0.4.0_x64-setup.exe`，运行安装程序即可。
+前往 [GitHub Releases](../../releases/latest) 下载 `Codex Beacon_0.5.0_x64-setup.exe`，运行安装程序即可。
 
 首次启动后需要在 Codex 的“设置 → Hooks”或 CLI `/hooks` 中审核并信任 Codex Beacon Hook。所有任务状态都保存在本机。
 
@@ -27,6 +27,17 @@
 Codex Beacon 只服务一个场景：在 Windows 桌面顶部持续呈现真实的 Codex 任务状态。
 
 它通过 Codex Hook 在本机接收任务生命周期事件，并只读解析对应的本地 Codex rollout 来补充当前活动；不使用进程或 CPU 占用猜测状态，也不会把任务内容上传到外部服务。
+
+![Codex Beacon 界面设计](assets/codex-beacon-ui-v5.png)
+
+## 设计原则
+
+- **状态先于装饰**：任务状态点固定在标题前，项目名与耗时处于同一信息行；正式产品图标不重复承担状态提示。
+- **一套语义颜色**：运行使用青蓝、等待使用琥珀、完成使用绿色、失败使用红色，状态点、耗时和提示文字保持一致。
+- **折叠也能读懂**：折叠态保留任务、真实项目名、耗时和当前状态；展开态再提供最近任务、实时活动与回到对话。
+- **克制的科技感**：灯光只用于状态反馈，文字不加辉光；动效支持 `prefers-reduced-motion`。
+
+完整说明见 [DESIGN.md](DESIGN.md)。
 
 ## 当前功能
 
@@ -37,7 +48,10 @@ Codex Beacon 只服务一个场景：在 Windows 桌面顶部持续呈现真实�
 | 实时活动 | 从本地 Codex rollout 显示最近动作、计划步骤以及待批准/待回复状态，不伪造总体完成百分比。 |
 | 回到对话 | 使用任务 `session_id` 精确打开对应的 Codex Desktop 对话。 |
 | 审批提醒 | 检测需要批准的操作并切换为琥珀色提醒，点击“前往批准”回到 Codex 完成审核。 |
-| 最近任务 | 按 `session_id + turn_id` 保留最近 6 个 Codex 任务，支持并行任务识别。 |
+| 最近任务 | 每个 `session_id` 只显示一条最新状态，最多保留 6 个真实用户对话。 |
+| 状态自动纠错 | 对照本地 rollout 的终止事件与活动时间，过滤内部任务，并在 Hook 漏报或 Codex 异常退出后纠正失联状态。 |
+| Windows 通知 | 仅在等待批准/回复、任务完成或任务失败时通知；点击通知直接打开对应 Codex 对话。 |
+| 新版本检查 | 启动后检查 GitHub Release；发现新版本时在设置中提供下载入口，不执行自动更新。 |
 | 状态动画 | 运行、完成、失败和长时间失联采用不同的克制反馈。 |
 | 本地 Hook 安装 | 一键安装或修复 Codex Hook，并保留用户现有的非 Codex Beacon Hook。 |
 | Windows 集成 | 始终置顶、系统托盘、开机启动、单实例和透明点击穿透。 |
@@ -86,7 +100,7 @@ pnpm tauri build
 
 ```text
 src-tauri/target/release/codex-beacon.exe
-src-tauri/target/release/bundle/nsis/Codex Beacon_0.4.0_x64-setup.exe
+src-tauri/target/release/bundle/nsis/Codex Beacon_0.5.0_x64-setup.exe
 ```
 
 ## 本地数据
@@ -99,7 +113,7 @@ src-tauri/target/release/bundle/nsis/Codex Beacon_0.4.0_x64-setup.exe
 %USERPROFILE%\.codex\config.toml
 ```
 
-- `codex-status.json` 最多保留 6 条会话状态。
+- `codex-status.json` 最多保留 6 条 Hook 状态；界面会按 `session_id` 合并为一个对话，并过滤非用户 rollout。
 - `codex-hook-verification.json` 只在 Codex 实际执行 Hook 后生成，用于区分“文件已配置”和“连接已验证”。
 - 安装或重装 Hook 会清除旧验证标记，下一条真实 Codex 任务会重新完成验证。
 - `codex-beacon-event.ps1` 只接收 Codex Hook 的标准输入并原子写入状态文件。
@@ -139,7 +153,9 @@ src-tauri/target/release/bundle/nsis/Codex Beacon_0.4.0_x64-setup.exe
 - 当前通过稳定的 `UserPromptSubmit` 与 `Stop` Hook 获取任务开始和完成事件，并从本地 rollout 补充最近动作与计划步骤；计划计数不等于总体完成百分比。
 - Codex Desktop 的审批通道没有向第三方窗口开放。Codex Beacon 只检测待批准状态并精确跳回对应对话，最终批准仍由 Codex 完成。
 - “回到对话”依赖 Codex Desktop 当前提供的 `codex://threads/{threadId}` 协议。
-- Codex 异常退出时可能收不到 `Stop`，运行状态超过 2 小时后会标记为“连接中断”。
+- Codex 异常退出或 Hook 漏报时，Codex Beacon 会优先读取 rollout 的终止事件；仍无终止事件且 10 分钟没有活动的任务会标记为“连接中断”。
+- Windows 通知依赖系统通知权限；Codex Beacon 不在通知正文中显示任务标题。
+- 新版本检查只读取 GitHub 最新 Release 标签，下载与安装仍由用户确认完成。
 
 ## 许可证
 

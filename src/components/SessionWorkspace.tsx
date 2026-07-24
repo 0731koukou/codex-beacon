@@ -1,17 +1,14 @@
 import {
   ArrowUpRight,
-  Check,
   CircleAlert,
   Clock3,
   Folder,
-  LoaderCircle,
   Sparkles,
 } from "lucide-react";
 import {
   compactText,
   formatRelativeTime,
   PHASE_HINTS,
-  PHASE_LABELS,
   projectName,
   sessionDuration,
   sessionKey,
@@ -39,35 +36,11 @@ export function SessionWorkspace({
     compactText(currentSession.activity, 180) ||
     compactText(currentSession.currentStep, 180) ||
     "Codex 正在处理任务";
-  const badgeLabel =
-    currentSession.attention === "approval"
-      ? "待批准"
-      : currentSession.attention === "input"
-        ? "待回复"
-        : PHASE_LABELS[currentSession.phase];
-
   return (
     <div className="session-workspace">
       <article className="current-session">
         <div className="session-eyebrow">
-          <span
-            className={`phase-badge phase-${currentSession.phase} attention-${currentSession.attention || "none"}`}
-          >
-            {currentSession.phase === "running" && !needsAttention && (
-              <LoaderCircle className="spin" aria-hidden="true" size={12} />
-            )}
-            {needsAttention && (
-              <CircleAlert aria-hidden="true" size={12} />
-            )}
-            {currentSession.phase === "completed" && (
-              <Check aria-hidden="true" size={12} />
-            )}
-            {(currentSession.phase === "failed" ||
-              currentSession.phase === "stale") && (
-              <CircleAlert aria-hidden="true" size={12} />
-            )}
-            {badgeLabel}
-          </span>
+          <span className="current-task-label">当前任务</span>
           <span className="session-age">
             {formatRelativeTime(currentSession.updatedAt, now)}
           </span>
@@ -80,7 +53,7 @@ export function SessionWorkspace({
             <Folder aria-hidden="true" size={13} />
             {projectName(currentSession.cwd)}
           </span>
-          <span>
+          <span className="session-duration">
             <Clock3 aria-hidden="true" size={13} />
             {sessionDuration(currentSession, now)}
           </span>
@@ -176,6 +149,8 @@ export function SessionWorkspace({
                 className={`session-list-item ${active ? "is-selected" : ""}`}
                 type="button"
                 key={sessionKey(session)}
+                data-phase={session.phase}
+                data-attention={session.attention || "none"}
                 onClick={() => onSelect(sessionKey(session))}
               >
                 <span
@@ -183,9 +158,11 @@ export function SessionWorkspace({
                 />
                 <span className="list-item-copy">
                   <strong>{taskTitle(session)}</strong>
-                  <span>
-                    {projectName(session.cwd)} ·{" "}
-                    {formatRelativeTime(session.updatedAt, now)}
+                  <span className="list-item-meta">
+                    <span>{projectName(session.cwd)}</span>
+                    <span className="list-item-time">
+                      {formatRelativeTime(session.updatedAt, now)}
+                    </span>
                   </span>
                 </span>
               </button>

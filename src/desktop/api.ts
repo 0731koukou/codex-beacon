@@ -20,3 +20,7 @@ export function getLaunchAtStartup() {
 export function setLaunchAtStartup(enabled: boolean) {
   return invoke<void>("set_launch_at_startup", { enabled });
 }
+
+export function openLatestRelease() {
+  return invoke<void>("open_latest_release");
+}

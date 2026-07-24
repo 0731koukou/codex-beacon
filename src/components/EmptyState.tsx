@@ -1,5 +1,6 @@
-import { Bot, LoaderCircle, Wrench } from "lucide-react";
+import { LoaderCircle, Wrench } from "lucide-react";
 import type { CodexIntegrationStatus } from "../codex/types";
+import codexBeaconIcon from "../../src-tauri/icons/128x128.png";
 
 export function EmptyState({
   integration,
@@ -17,7 +18,12 @@ export function EmptyState({
   return (
     <div className={`empty-state ${needsReview ? "is-review" : ""}`}>
       <div className="empty-visual">
-        <Bot aria-hidden="true" size={28} strokeWidth={1.6} />
+        <img
+          className="empty-icon"
+          src={codexBeaconIcon}
+          alt=""
+          aria-hidden="true"
+        />
         <span />
       </div>
       <div className="empty-copy">

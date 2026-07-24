@@ -3,14 +3,14 @@
   height: 100%;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 28px;
 }
 
 .empty-visual {
   position: relative;
   display: grid;
-  width: 82px;
-  height: 82px;
+  width: 88px;
+  height: 88px;
   place-items: center;
   border: 1px solid rgba(var(--accent-rgb), 0.14);
   border-radius: 50%;
@@ -51,9 +51,17 @@
   box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.45);
 }
 
+.empty-icon {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
 .empty-copy {
   display: flex;
-  width: 310px;
+  width: 350px;
   flex-direction: column;
   align-items: flex-start;
 }
@@ -61,20 +69,20 @@
 .empty-kicker {
   margin-bottom: 6px;
   color: rgba(var(--accent-rgb), 0.72);
-  font-size: 8.5px;
+  font-size: 9.5px;
   font-weight: 750;
   letter-spacing: 0.15em;
 }
 
 .empty-copy h1 {
-  font-size: 20px;
-  font-weight: 650;
+  font-size: 22px;
+  font-weight: 680;
 }
 
 .empty-copy p {
   margin: 8px 0 13px;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 11.5px;
   line-height: 1.55;
 }
 
@@ -113,14 +121,14 @@
 }
 
 .primary-action {
-  height: 32px;
-  padding: 0 13px;
+  height: 34px;
+  padding: 0 14px;
   gap: 7px;
   border-radius: 16px;
   color: #092117;
   background: var(--accent);
   box-shadow: 0 8px 22px rgba(var(--accent-rgb), 0.15);
-  font-size: 10.5px;
+  font-size: 11px;
 }
 
 .primary-action:hover {
@@ -142,6 +150,6 @@
 .inline-notice {
   margin-top: 8px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 

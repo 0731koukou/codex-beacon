@@ -1,12 +1,12 @@
 ﻿.island-footer {
   display: flex;
-  height: 42px;
-  padding: 0 20px;
+  height: 44px;
+  padding: 0 22px;
   align-items: center;
   justify-content: space-between;
   border-top: 1px solid var(--line);
-  color: var(--subtle);
-  font-size: 8.5px;
+  color: var(--muted);
+  font-size: 9.5px;
 }
 
 .footer-signal {

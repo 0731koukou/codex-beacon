@@ -1,5 +1,5 @@
-import { Bot } from "lucide-react";
 import type { CodexPhase } from "../codex/types";
+import codexBeaconIcon from "../../src-tauri/icons/128x128.png";
 
 export function CodexMark({
   phase,
@@ -10,8 +10,7 @@ export function CodexMark({
 }) {
   return (
     <span className={`codex-mark phase-${phase} ${compact ? "is-compact" : ""}`}>
-      <Bot aria-hidden="true" size={compact ? 17 : 21} strokeWidth={1.8} />
-      <span className="mark-pulse" />
+      <img src={codexBeaconIcon} alt="" aria-hidden="true" />
     </span>
   );
 }

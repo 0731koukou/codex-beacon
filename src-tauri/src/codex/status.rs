@@ -4,7 +4,7 @@ use super::{
     default_codex_phase, CodexSession, CodexStatusSnapshot, PersistedCodexStatus,
     CODEX_RUNNING_STALE_AFTER_MS, CODEX_STATUS_FILE_NAME, CREATE_NO_WINDOW,
 };
-use std::{collections::HashMap, fs, os::windows::process::CommandExt, process::Command};
+use std::{fs, os::windows::process::CommandExt, process::Command};
 use tauri::AppHandle;
 
 #[tauri::command]
@@ -97,6 +97,7 @@ pub(super) fn normalize_codex_sessions(sessions: &mut Vec<CodexSession>) {
             session.started_at = session.updated_at.max(0);
         }
         if session.phase == "running"
+            && session.attention.is_empty()
             && session.updated_at > 0
             && now.saturating_sub(session.updated_at) >= CODEX_RUNNING_STALE_AFTER_MS
         {
@@ -104,35 +105,13 @@ pub(super) fn normalize_codex_sessions(sessions: &mut Vec<CodexSession>) {
         }
     }
 
-    let newest_running_turns = sessions
-        .iter()
-        .filter(|session| session.phase == "running")
-        .fold(
-            HashMap::<String, (i64, String)>::new(),
-            |mut newest, session| {
-                let candidate = (session.started_at, session.turn_id.clone());
-                if newest
-                    .get(&session.session_id)
-                    .is_none_or(|current| candidate.0 > current.0)
-                {
-                    newest.insert(session.session_id.clone(), candidate);
-                }
-                newest
-            },
-        );
-    for session in sessions
-        .iter_mut()
-        .filter(|session| session.phase == "running")
-    {
-        if newest_running_turns
-            .get(&session.session_id)
-            .is_some_and(|(_, turn_id)| turn_id != &session.turn_id)
-        {
-            session.phase = "failed".to_string();
-            session.activity = "任务已停止".to_string();
-            session.attention.clear();
-        }
-    }
+    sessions.sort_by(|left, right| {
+        left.session_id
+            .cmp(&right.session_id)
+            .then_with(|| right.started_at.cmp(&left.started_at))
+            .then_with(|| right.updated_at.cmp(&left.updated_at))
+    });
+    sessions.dedup_by(|left, right| left.session_id == right.session_id);
 
     sessions.sort_by(|left, right| {
         let left_running = left.phase == "running";

@@ -1,4 +1,4 @@
-﻿use std::{
+use std::{
     env,
     os::windows::process::CommandExt,
     process::Command,
@@ -20,14 +20,15 @@ const WINDOW_LABEL: &str = "main";
 const STAGE_WINDOW_WIDTH: f64 = 820.0;
 const STAGE_WINDOW_HEIGHT: f64 = 460.0;
 const WINDOW_MARGIN_Y: f64 = 12.0;
-const COLLAPSED_ISLAND_WIDTH: f64 = 374.0;
-const COLLAPSED_ISLAND_HEIGHT: f64 = 64.0;
-const EXPANDED_ISLAND_WIDTH: f64 = 592.0;
-const EXPANDED_ISLAND_HEIGHT: f64 = 376.0;
-const EXPANDED_RADIUS: f64 = 30.0;
+const COLLAPSED_ISLAND_WIDTH: f64 = 410.0;
+const COLLAPSED_ISLAND_HEIGHT: f64 = 68.0;
+const EXPANDED_ISLAND_WIDTH: f64 = 660.0;
+const EXPANDED_ISLAND_HEIGHT: f64 = 404.0;
+const EXPANDED_RADIUS: f64 = 26.0;
 const STARTUP_REGISTRY_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
 const STARTUP_REGISTRY_VALUE: &str = "Codex Beacon";
 const LEGACY_STARTUP_REGISTRY_VALUE: &str = "FocuSD Island";
+const LATEST_RELEASE_URL: &str = "https://github.com/0731koukou/codex-beacon/releases/latest";
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 static WINDOW_STATE: OnceLock<Mutex<IslandWindowState>> = OnceLock::new();
@@ -148,6 +149,16 @@ pub(crate) fn set_launch_at_startup(enabled: bool) -> Result<(), String> {
         remove_startup_registry_value(STARTUP_REGISTRY_VALUE)?;
         remove_startup_registry_value(LEGACY_STARTUP_REGISTRY_VALUE)
     }
+}
+
+#[tauri::command]
+pub(crate) fn open_latest_release() -> Result<(), String> {
+    Command::new("explorer.exe")
+        .creation_flags(CREATE_NO_WINDOW)
+        .arg(LATEST_RELEASE_URL)
+        .spawn()
+        .map_err(|error| format!("Failed to open the Codex Beacon release page: {error}"))?;
+    Ok(())
 }
 
 fn remove_startup_registry_value(value_name: &str) -> Result<(), String> {

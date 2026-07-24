@@ -10,16 +10,18 @@
   --accent-rgb: 85, 228, 155;
   --active: #55c7ff;
   --active-rgb: 85, 199, 255;
-  --surface: rgba(13, 16, 15, 0.965);
-  --surface-strong: #0b0e0d;
-  --surface-soft: rgba(255, 255, 255, 0.045);
-  --line: rgba(255, 255, 255, 0.09);
-  --line-strong: rgba(255, 255, 255, 0.14);
-  --text: #f4f7f5;
-  --muted: #8f9994;
-  --subtle: #626b67;
+  --surface: rgba(7, 12, 14, 0.976);
+  --surface-strong: #070b0d;
+  --surface-soft: rgba(166, 218, 236, 0.055);
+  --line: rgba(174, 219, 235, 0.105);
+  --line-strong: rgba(184, 228, 243, 0.18);
+  --text: #f4f9fa;
+  --muted: #a6b3b6;
+  --subtle: #748187;
   --warning: #f3bd65;
+  --warning-rgb: 243, 189, 101;
   --danger: #f17a7a;
+  --danger-rgb: 241, 122, 122;
 }
 
 * {
