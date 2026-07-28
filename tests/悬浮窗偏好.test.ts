@@ -1,8 +1,16 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const preferences = await import("../src/desktop/preferences.ts").catch(
   () => ({}),
+);
+const presentation = await import("../src/codex/presentation.ts").catch(
+  () => ({}),
+);
+const shellStyles = await readFile(
+  new URL("../src/styles/shell.css", import.meta.url),
+  "utf8",
 );
 
 test("透明度限制在 30 到 100，并在无效值时回退 98", () => {
@@ -80,5 +88,54 @@ test("显示器工作区映射保留负坐标", () => {
       size: { width: 1920, height: 1080 },
     }),
     { x: -1920, y: 0, width: 1920, height: 1080 },
+  );
+});
+
+test("透明度只线性作用于悬浮窗主背景", () => {
+  assert.match(shellStyles, /--surface:\s*rgba\(7,\s*12,\s*14,\s*var\(--surface-opacity\)\)/);
+  assert.doesNotMatch(shellStyles, /--content-protection/);
+  assert.doesNotMatch(
+    shellStyles,
+    /calc\(\(1\s*-\s*var\(--surface-opacity\)\)/,
+  );
+});
+
+test("任务标题纵向轮播在末项后回到第一项", () => {
+  assert.equal(typeof presentation.moveSessionIndex, "function");
+  assert.equal(presentation.moveSessionIndex(0, 0), 0);
+  assert.equal(presentation.moveSessionIndex(0, 1), 0);
+  assert.equal(presentation.moveSessionIndex(0, 3), 1);
+  assert.equal(presentation.moveSessionIndex(2, 3), 0);
+  assert.equal(presentation.moveSessionIndex(0, 3, -1), 2);
+});
+
+test("全部任务完成六秒后才进入紧凑待命状态", () => {
+  const completed = {
+    phase: "completed",
+    attention: "",
+    updatedAt: 1_000,
+  };
+  assert.equal(presentation.shouldCompactIsland([], 10_000), true);
+  assert.equal(
+    presentation.shouldCompactIsland([completed], 6_999),
+    false,
+  );
+  assert.equal(
+    presentation.shouldCompactIsland([completed], 7_000),
+    true,
+  );
+  assert.equal(
+    presentation.shouldCompactIsland(
+      [{ ...completed, phase: "running" }],
+      20_000,
+    ),
+    false,
+  );
+  assert.equal(
+    presentation.shouldCompactIsland(
+      [{ ...completed, phase: "failed" }],
+      20_000,
+    ),
+    false,
   );
 });

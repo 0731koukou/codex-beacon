@@ -13,6 +13,7 @@ pub fn run() {
         .setup(desktop::setup)
         .invoke_handler(tauri::generate_handler![
             desktop::set_island_interaction,
+            desktop::snap_island_to_edge,
             desktop::show_ready_island,
             desktop::minimize_island,
             desktop::get_launch_at_startup,

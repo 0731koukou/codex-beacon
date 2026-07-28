@@ -5,6 +5,7 @@ import {
   RotateCw,
   Trash2,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 import { compactText } from "../codex/presentation";
 import type { CodexIntegrationStatus } from "../codex/types";
 
@@ -100,6 +101,11 @@ export function SettingsPanel({
               max="100"
               step="1"
               value={backgroundOpacity}
+              style={
+                {
+                  "--opacity-progress": `${((backgroundOpacity - 30) / 70) * 100}%`,
+                } as CSSProperties
+              }
               aria-label="调节背景透明度"
               aria-valuetext={`${backgroundOpacity}%`}
               onChange={(event) =>

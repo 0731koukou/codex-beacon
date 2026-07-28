@@ -27,12 +27,14 @@ import {
   openCodexThread,
 } from "./codex/api";
 import {
+  moveSessionIndex,
   normalizeSession,
   PHASE_HINTS,
   PHASE_LABELS,
   projectName,
   sessionDuration,
   sessionKey,
+  shouldCompactIsland,
   shortSessionId,
   taskTitle,
 } from "./codex/presentation";
@@ -55,6 +57,7 @@ import {
   setIslandInteraction,
   setLaunchAtStartup,
   showReadyIsland,
+  snapIslandToEdge,
 } from "./desktop/api";
 import {
   listenForNotificationActions,
@@ -130,10 +133,13 @@ function App() {
   const [backgroundOpacity, setBackgroundOpacity] = useState(
     initialBackgroundOpacity,
   );
+  const [collapsedSessionIndex, setCollapsedSessionIndex] = useState(0);
+  const [titleRotationPaused, setTitleRotationPaused] = useState(false);
   const notificationStates = useRef(
     new Map<string, SessionNotificationState>(),
   );
   const notificationsReady = useRef(false);
+  const lastWheelSwitchAt = useRef(0);
 
   const sessions = useMemo(
     () => status.sessions.map(normalizeSession),
@@ -152,11 +158,21 @@ function App() {
     return sessions[0];
   }, [selectedKey, sessions]);
 
+  const isIdleCompact = shouldCompactIsland(sessions, now);
+  const collapsedDisplayIndex =
+    sessions.length > 0 ? collapsedSessionIndex % sessions.length : 0;
+  const collapsedSession =
+    !isIdleCompact && sessions.length > 0
+      ? sessions[collapsedDisplayIndex]
+      : undefined;
+
   const runningCount = sessions.filter(
     (session) => session.phase === "running",
   ).length;
   const currentPhase = currentSession?.phase ?? "idle";
   const currentAttention = currentSession?.attention ?? "";
+  const collapsedPhase = collapsedSession?.phase ?? "idle";
+  const collapsedAttention = collapsedSession?.attention ?? "";
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -178,11 +194,37 @@ function App() {
 
   const changeMode = useCallback(async (nextMode: IslandMode) => {
     setMode(nextMode);
+    setTitleRotationPaused(false);
     if (nextMode === "collapsed") {
       setSettingsOpen(false);
     }
-    await setIslandInteraction(nextMode).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    void setIslandInteraction(mode, !isIdleCompact).catch(
+      () => undefined,
+    );
+  }, [isIdleCompact, mode]);
+
+  useEffect(() => {
+    setCollapsedSessionIndex((current) =>
+      sessions.length > 0 ? current % sessions.length : 0,
+    );
+    if (
+      mode !== "collapsed" ||
+      isIdleCompact ||
+      titleRotationPaused ||
+      sessions.length < 2
+    ) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setCollapsedSessionIndex((current) =>
+        moveSessionIndex(current, sessions.length),
+      );
+    }, 4_200);
+    return () => window.clearInterval(timer);
+  }, [isIdleCompact, mode, sessions.length, titleRotationPaused]);
 
   useEffect(() => {
     void Promise.all([
@@ -218,6 +260,7 @@ function App() {
 
     let active = true;
     let unlisten: (() => void) | undefined;
+    let snapTimer: number | undefined;
     void getCurrentWindow()
       .onMoved(({ payload }) => {
         try {
@@ -225,6 +268,10 @@ function App() {
         } catch {
           // The window remains draggable when storage is unavailable.
         }
+        window.clearTimeout(snapTimer);
+        snapTimer = window.setTimeout(() => {
+          void snapIslandToEdge().catch(() => undefined);
+        }, 180);
       })
       .then((next) => {
         if (active) {
@@ -237,6 +284,7 @@ function App() {
 
     return () => {
       active = false;
+      window.clearTimeout(snapTimer);
       unlisten?.();
     };
   }, []);
@@ -278,10 +326,14 @@ function App() {
 
     let active = true;
     let unlisten: (() => void) | undefined;
+    let collapseTimer: number | undefined;
     void getCurrentWindow()
       .onFocusChanged(({ payload: focused }) => {
+        window.clearTimeout(collapseTimer);
         if (!focused) {
-          void changeMode("collapsed");
+          collapseTimer = window.setTimeout(() => {
+            void changeMode("collapsed");
+          }, 150);
         }
       })
       .then((next) => {
@@ -295,6 +347,7 @@ function App() {
 
     return () => {
       active = false;
+      window.clearTimeout(collapseTimer);
       unlisten?.();
     };
   }, [changeMode, mode]);
@@ -414,12 +467,6 @@ function App() {
     }
   };
 
-  const collapseFromBlank = (event: React.MouseEvent<HTMLElement>) => {
-    if (event.target === event.currentTarget) {
-      void changeMode("collapsed");
-    }
-  };
-
   const startWindowDrag = (event: React.MouseEvent<HTMLElement>) => {
     if (
       event.button !== 0 ||
@@ -444,21 +491,41 @@ function App() {
     }
   };
 
-  const collapsedSubtitle = currentSession
-    ? projectName(currentSession.cwd)
+  const switchCollapsedSession = (direction: number) => {
+    setCollapsedSessionIndex((current) =>
+      moveSessionIndex(current, sessions.length, direction),
+    );
+  };
+
+  const switchCollapsedSessionByWheel = (
+    event: React.WheelEvent<HTMLElement>,
+  ) => {
+    if (sessions.length < 2 || Math.abs(event.deltaY) < 4) {
+      return;
+    }
+    const switchedAt = performance.now();
+    if (switchedAt - lastWheelSwitchAt.current < 280) {
+      return;
+    }
+    lastWheelSwitchAt.current = switchedAt;
+    switchCollapsedSession(event.deltaY > 0 ? 1 : -1);
+  };
+
+  const collapsedSubtitle = collapsedSession
+    ? projectName(collapsedSession.cwd)
     : integration.verified
       ? "Codex Hook 已验证"
       : integration.configured
         ? "Hook 已安装，等待 Codex 审核"
         : "尚未连接 Codex";
   const compactStateLabel =
-    currentAttention === "approval"
+    collapsedAttention === "approval"
       ? "等待批准"
-      : currentAttention === "input"
+      : collapsedAttention === "input"
         ? "等待回复"
-        : currentPhase === "completed"
+        : collapsedPhase === "completed"
           ? "任务完成"
-          : PHASE_LABELS[currentPhase];
+          : PHASE_LABELS[collapsedPhase];
   const integrationPhase = integration.verified
     ? "verified"
     : integration.configured
@@ -493,13 +560,16 @@ function App() {
       : integration.configured
         ? "重启 Codex 并信任 Codex Beacon Hook"
         : "先安装本地 Codex Hook";
+  const displayPhase = mode === "collapsed" ? collapsedPhase : currentPhase;
+  const displayAttention =
+    mode === "collapsed" ? collapsedAttention : currentAttention;
 
   return (
     <main
-      className={`island-stage mode-${mode}`}
-      data-phase={currentPhase}
+      className={`island-stage mode-${mode} ${isIdleCompact ? "is-idle" : ""}`}
+      data-phase={displayPhase}
       data-integration={integrationPhase}
-      data-attention={currentAttention}
+      data-attention={displayAttention}
       aria-live="polite"
       style={
         {
@@ -507,7 +577,19 @@ function App() {
         } as CSSProperties
       }
     >
-      <section className="collapsed-shell" aria-hidden={mode !== "collapsed"}>
+      <section
+        className="collapsed-shell"
+        aria-hidden={mode !== "collapsed"}
+        onMouseEnter={() => setTitleRotationPaused(true)}
+        onMouseLeave={() => setTitleRotationPaused(false)}
+        onFocus={() => setTitleRotationPaused(true)}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            setTitleRotationPaused(false);
+          }
+        }}
+        onWheel={switchCollapsedSessionByWheel}
+      >
         <button
           className="collapsed-drag-handle"
           type="button"
@@ -522,33 +604,74 @@ function App() {
         <button
           className="collapsed-main"
           type="button"
-          onClick={() => void changeMode("expanded")}
+          onClick={() => {
+            if (collapsedSession) {
+              setSelectedKey(sessionKey(collapsedSession));
+            }
+            void changeMode("expanded");
+          }}
+          onKeyDown={(event) => {
+            if (sessions.length < 2) {
+              return;
+            }
+            if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+              event.preventDefault();
+              switchCollapsedSession(-1);
+            } else if (
+              event.key === "ArrowDown" ||
+              event.key === "ArrowRight"
+            ) {
+              event.preventDefault();
+              switchCollapsedSession(1);
+            }
+          }}
           tabIndex={mode === "collapsed" ? 0 : -1}
-          aria-label="展开 Codex 灵动岛"
+          aria-label={
+            sessions.length > 1
+              ? `展开 Codex 灵动岛，当前第 ${collapsedDisplayIndex + 1} 个任务，共 ${sessions.length} 个，可用滚轮或方向键切换`
+              : "展开 Codex 灵动岛"
+          }
         >
-          <CodexMark phase={currentPhase} />
+          <CodexMark phase={collapsedPhase} />
           <span className="collapsed-copy">
             <span className="collapsed-title-row">
-              {currentSession && <span className="collapsed-task-dot" />}
+              {collapsedSession && <span className="collapsed-task-dot" />}
               <span className="collapsed-title">
-                {currentSession ? taskTitle(currentSession) : emptyTitle}
+                <span
+                  className="collapsed-title-text"
+                  key={
+                    collapsedSession
+                      ? sessionKey(collapsedSession)
+                      : "idle"
+                  }
+                >
+                  {collapsedSession ? taskTitle(collapsedSession) : emptyTitle}
+                </span>
               </span>
             </span>
             <span
-              className={`collapsed-subtitle-row ${currentSession ? "has-status" : ""}`}
+              className={`collapsed-subtitle-row ${collapsedSession ? "has-status" : ""}`}
             >
               <span className="collapsed-subtitle">{collapsedSubtitle}</span>
-              {currentSession && (
+              {collapsedSession && (
                 <span className="collapsed-time">
-                  {sessionDuration(currentSession, now)}
+                  {sessionDuration(collapsedSession, now)}
                 </span>
               )}
             </span>
           </span>
           <span className="collapsed-status-group">
-            {currentSession ? (
+            {collapsedSession && sessions.length > 1 && (
               <span
-                className={`collapsed-status phase-${currentPhase} attention-${currentAttention || "none"}`}
+                className="collapsed-session-index"
+                title="滚轮或方向键切换任务"
+              >
+                {collapsedDisplayIndex + 1}/{sessions.length}
+              </span>
+            )}
+            {collapsedSession ? (
+              <span
+                className={`collapsed-status phase-${collapsedPhase} attention-${collapsedAttention || "none"}`}
               >
                 {compactStateLabel}
               </span>
@@ -640,7 +763,7 @@ function App() {
           </div>
         </header>
 
-        <div className="island-body" onClick={collapseFromBlank}>
+        <div className="island-body">
           {settingsOpen ? (
             <SettingsPanel
               integration={integration}
@@ -675,7 +798,7 @@ function App() {
           )}
         </div>
 
-        <footer className="island-footer" onClick={collapseFromBlank}>
+        <footer className="island-footer">
           <span className="footer-signal">
             <span className={`signal-line phase-${currentPhase}`} />
             {footerHint}

@@ -6,7 +6,7 @@
   <p>Windows 上的 Codex 任务灵动岛。离开 Codex 窗口，也能看见任务是否在运行、用了多久、在哪个项目以及最终回复。</p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-0.6.0-55E49B">
+    <img alt="Version" src="https://img.shields.io/badge/version-0.7.0-55E49B">
     <img alt="License" src="https://img.shields.io/badge/license-MIT-55E49B">
     <img alt="Platform" src="https://img.shields.io/badge/platform-Windows-0078D4">
     <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-24C8DB">
@@ -18,7 +18,7 @@
 
 ## 下载与安装
 
-前往 [GitHub Releases](../../releases/latest) 下载 `Codex-Beacon_0.6.0_x64-setup.exe`，运行安装程序即可。
+前往 [GitHub Releases](../../releases/latest) 下载 `Codex-Beacon_0.7.0_x64-setup.exe`，运行安装程序即可。
 
 首次启动后需要在 Codex 的“设置 → Hooks”或 CLI `/hooks` 中审核并信任 Codex Beacon Hook。所有任务状态都保存在本机。
 
@@ -54,7 +54,7 @@ Codex Beacon 只服务一个场景：在 Windows 桌面顶部持续呈现真实�
 | 新版本检查 | 启动后检查 GitHub Release；发现新版本时在设置中提供下载入口，不执行自动更新。 |
 | 状态动画 | 运行、完成、失败和长时间失联采用不同的克制反馈。 |
 | 本地 Hook 安装 | 一键安装或修复 Codex Hook，并保留用户现有的非 Codex Beacon Hook。 |
-| Windows 集成 | 始终置顶、可拖动与位置记忆、背景透明度调节、系统托盘、开机启动、单实例和透明点击穿透。 |
+| Windows 集成 | 始终置顶、拖动与位置记忆、边缘吸附、30%–100% 背景透明度、无任务紧凑态、多任务轮播与手动切换、防误收起、系统托盘、开机启动、单实例和透明点击穿透。 |
 
 ## 使用方法
 
@@ -100,7 +100,7 @@ pnpm tauri build
 
 ```text
 src-tauri/target/release/codex-beacon.exe
-src-tauri/target/release/bundle/nsis/Codex Beacon_0.6.0_x64-setup.exe
+src-tauri/target/release/bundle/nsis/Codex Beacon_0.7.0_x64-setup.exe
 ```
 
 ## 本地数据

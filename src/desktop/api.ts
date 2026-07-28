@@ -1,8 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { IslandMode } from "../codex/types";
 
-export function setIslandInteraction(mode: IslandMode) {
-  return invoke<void>("set_island_interaction", { mode });
+export function setIslandInteraction(mode: IslandMode, hasTask: boolean) {
+  return invoke<void>("set_island_interaction", { mode, hasTask });
+}
+
+export function snapIslandToEdge() {
+  return invoke<void>("snap_island_to_edge");
 }
 
 export function showReadyIsland() {

@@ -100,6 +100,40 @@ export function sessionKey(session: CodexSession) {
   return `${session.sessionId}:${session.turnId}`;
 }
 
+export function moveSessionIndex(
+  current: number,
+  total: number,
+  direction = 1,
+) {
+  if (total <= 1) {
+    return 0;
+  }
+  const step = direction < 0 ? -1 : 1;
+  return (current + step + total) % total;
+}
+
+export function shouldCompactIsland(
+  sessions: CodexSession[],
+  now: number,
+  lingerMs = 6_000,
+) {
+  if (sessions.length === 0) {
+    return true;
+  }
+  if (
+    sessions.some(
+      (session) =>
+        session.phase !== "completed" || Boolean(session.attention),
+    )
+  ) {
+    return false;
+  }
+  return (
+    now - Math.max(...sessions.map((session) => session.updatedAt)) >=
+    lingerMs
+  );
+}
+
 function normalizePhase(phase: string): CodexPhase {
   if (
     phase === "running" ||

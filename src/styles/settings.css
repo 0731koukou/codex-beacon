@@ -163,16 +163,48 @@
 
 .opacity-control {
   display: grid;
-  grid-template-columns: 82px 32px;
+  grid-template-columns: 132px 38px;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
 }
 
 .opacity-control input {
-  width: 82px;
+  appearance: none;
+  width: 132px;
+  height: 18px;
   margin: 0;
-  accent-color: var(--accent);
+  border-radius: 9px;
+  background: linear-gradient(
+      90deg,
+      rgba(var(--accent-rgb), 0.9) var(--opacity-progress),
+      rgba(184, 228, 243, 0.2) var(--opacity-progress)
+    )
+    center / 100% 4px no-repeat;
   cursor: pointer;
+}
+
+.opacity-control input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.opacity-control input::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  appearance: none;
+  border: 2px solid rgba(7, 12, 14, 0.86);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.42),
+    0 2px 8px rgba(0, 0, 0, 0.42);
+}
+
+.opacity-control input:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.8);
+  outline-offset: 2px;
 }
 
 .opacity-control output {

@@ -22,9 +22,13 @@ const STAGE_WINDOW_HEIGHT: f64 = 460.0;
 const WINDOW_MARGIN_Y: f64 = 12.0;
 const COLLAPSED_ISLAND_WIDTH: f64 = 510.0;
 const COLLAPSED_ISLAND_HEIGHT: f64 = 68.0;
+const IDLE_ISLAND_WIDTH: f64 = 320.0;
+const IDLE_ISLAND_HEIGHT: f64 = 56.0;
 const EXPANDED_ISLAND_WIDTH: f64 = 660.0;
 const EXPANDED_ISLAND_HEIGHT: f64 = 404.0;
 const EXPANDED_RADIUS: f64 = 26.0;
+const EDGE_SNAP_THRESHOLD: f64 = 16.0;
+const EDGE_SNAP_MARGIN: f64 = 12.0;
 const STARTUP_REGISTRY_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
 const STARTUP_REGISTRY_VALUE: &str = "Codex Beacon";
 const LEGACY_STARTUP_REGISTRY_VALUE: &str = "FocuSD Island";
@@ -66,26 +70,88 @@ impl IslandMode {
 #[derive(Clone, Copy)]
 struct IslandWindowState {
     mode: IslandMode,
+    has_task: bool,
 }
 
 impl Default for IslandWindowState {
     fn default() -> Self {
         Self {
             mode: IslandMode::Collapsed,
+            has_task: false,
+        }
+    }
+}
+
+impl IslandWindowState {
+    fn size(self) -> (f64, f64) {
+        match (self.mode, self.has_task) {
+            (IslandMode::Collapsed, false) => (IDLE_ISLAND_WIDTH, IDLE_ISLAND_HEIGHT),
+            _ => self.mode.base_size(),
+        }
+    }
+
+    fn corner_radius(self) -> f64 {
+        match (self.mode, self.has_task) {
+            (IslandMode::Collapsed, false) => IDLE_ISLAND_HEIGHT / 2.0,
+            _ => self.mode.corner_radius(),
         }
     }
 }
 
 #[tauri::command]
-pub(crate) fn set_island_interaction(app: AppHandle, mode: String) -> Result<(), String> {
+pub(crate) fn set_island_interaction(
+    app: AppHandle,
+    mode: String,
+    has_task: bool,
+) -> Result<(), String> {
     let window = main_window(&app)?;
     let mode = IslandMode::from_value(&mode)?;
     mutate_window_state(|state| {
         state.mode = mode;
+        state.has_task = has_task;
     });
     window
         .set_ignore_cursor_events(false)
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub(crate) fn snap_island_to_edge(app: AppHandle) -> Result<(), String> {
+    let window = main_window(&app)?;
+    let position = window.outer_position().map_err(|error| error.to_string())?;
+    let stage_size = window.outer_size().map_err(|error| error.to_string())?;
+    let monitor = window
+        .current_monitor()
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "No monitor is available for edge snapping.".to_string())?;
+    let work_area = monitor.work_area();
+    let scale = monitor.scale_factor();
+    let (island_width, island_height) = read_window_state().size();
+    let snapped = snapped_stage_position(
+        (position.x, position.y),
+        stage_size.width as i32,
+        (
+            (island_width * scale).round() as i32,
+            (island_height * scale).round() as i32,
+        ),
+        (
+            work_area.position.x,
+            work_area.position.y,
+            work_area.size.width as i32,
+            work_area.size.height as i32,
+        ),
+        (EDGE_SNAP_THRESHOLD * scale).round() as i32,
+        (EDGE_SNAP_MARGIN * scale).round() as i32,
+    );
+
+    if snapped != (position.x, position.y) {
+        window
+            .set_position(Position::Physical(PhysicalPosition::new(
+                snapped.0, snapped.1,
+            )))
+            .map_err(|error| error.to_string())?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -277,11 +343,11 @@ fn cursor_is_inside_island(window: &WebviewWindow) -> bool {
     let local_x = (cursor.x - window_rect.left) as f64;
     let local_y = (cursor.y - window_rect.top) as f64;
     let state = read_window_state();
-    let (base_width, base_height) = state.mode.base_size();
+    let (base_width, base_height) = state.size();
     let island_width = base_width * physical_scale;
     let island_height = base_height * physical_scale;
     let island_left = (window_width - island_width) / 2.0;
-    let radius = state.mode.corner_radius() * physical_scale;
+    let radius = state.corner_radius() * physical_scale;
 
     point_in_rounded_rect(
         local_x,
@@ -329,6 +395,105 @@ fn point_in_rounded_rect(
     let dy = y - center_y;
 
     (dx * dx) + (dy * dy) <= radius * radius
+}
+
+fn snapped_stage_position(
+    position: (i32, i32),
+    stage_width: i32,
+    island_size: (i32, i32),
+    work_area: (i32, i32, i32, i32),
+    threshold: i32,
+    margin: i32,
+) -> (i32, i32) {
+    let side_padding = (stage_width - island_size.0) / 2;
+    (
+        snap_axis(
+            position.0,
+            side_padding,
+            island_size.0,
+            work_area.0,
+            work_area.2,
+            threshold,
+            margin,
+        ),
+        snap_axis(
+            position.1,
+            0,
+            island_size.1,
+            work_area.1,
+            work_area.3,
+            threshold,
+            margin,
+        ),
+    )
+}
+
+fn snap_axis(
+    position: i32,
+    visible_offset: i32,
+    visible_size: i32,
+    work_start: i32,
+    work_size: i32,
+    threshold: i32,
+    margin: i32,
+) -> i32 {
+    let visible_start = position + visible_offset;
+    let visible_end = visible_start + visible_size;
+    let target_start = work_start + margin;
+    let target_end = work_start + work_size - margin;
+    let start_distance = (visible_start - target_start).abs();
+    let end_distance = (visible_end - target_end).abs();
+
+    if start_distance <= threshold && start_distance <= end_distance {
+        target_start - visible_offset
+    } else if end_distance <= threshold {
+        target_end - visible_size - visible_offset
+    } else {
+        position
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn idle_island_uses_the_compact_hit_area() {
+        let idle = IslandWindowState::default();
+        assert_eq!(idle.size(), (320.0, 56.0));
+        assert_eq!(idle.corner_radius(), 28.0);
+    }
+
+    #[test]
+    fn island_stage_snaps_by_the_visible_island_edges() {
+        let stage_width = 820;
+        let collapsed = (510, 68);
+        let work_area = (0, 0, 1920, 1040);
+
+        assert_eq!(
+            snapped_stage_position((-150, 200), stage_width, collapsed, work_area, 16, 12),
+            (-143, 200)
+        );
+        assert_eq!(
+            snapped_stage_position((1250, 954), stage_width, collapsed, work_area, 16, 12),
+            (1243, 960)
+        );
+        assert_eq!(
+            snapped_stage_position((300, 300), stage_width, collapsed, work_area, 16, 12),
+            (300, 300)
+        );
+        assert_eq!(
+            snapped_stage_position(
+                (-2070, 200),
+                stage_width,
+                collapsed,
+                (-1920, 0, 1920, 1040),
+                16,
+                12,
+            ),
+            (-2063, 200)
+        );
+    }
 }
 
 pub(crate) fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
